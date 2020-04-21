@@ -284,7 +284,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
 @FeignClient(name = "diagnosis", url = "http://diagnosis:8080")
-public interface MedicalRecordService {
+  public interface MedicalRecordService {
 
     @RequestMapping(method = RequestMethod.POST, path = "/medicalRecords")
     public void diagnosis(@RequestBody MedicalRecord medicalRecord);
@@ -292,11 +292,15 @@ public interface MedicalRecordService {
 
 ```
 
-- 예약을 받은 직후 진료를 진행하도록 처리
-
+- 예약완료 직후(@PostPersist) 진단을 요청하도록 처리
+# Reservation.java (Entity)
 ```
-# Order.java (Entity)
+@PostPersist
+    public void publishReservationReservedEvent() {
+//
+        MedicalRecord medicalRecord = new MedicalRecord();
 
+<<<<<<< HEAD
     @PostPersist
        public void publishReservationReservedEvent() {
    
@@ -312,7 +316,6 @@ public interface MedicalRecordService {
    
    
            // Reserved 이벤트 발생
-   
            ObjectMapper objectMapper = new ObjectMapper();
            String json = null;
    
@@ -329,13 +332,12 @@ public interface MedicalRecordService {
                    .withPayload(json)
                    .setHeader(MessageHeaders.CONTENT_TYPE, MimeTypeUtils.APPLICATION_JSON)
                    .build());
-   
 ```
 
-- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 결제 시스템이 장애가 나면 주문도 못받는다는 것을 확인:
-
+- 동기식 호출에서는 호출 시간에 따른 타임 커플링이 발생하며, 진단 시스템이 장애가 나면 예약도 못받는다는 것을 확인.(비즈상 무리가 있음..) 
 
 ```
+<<<<<<< HEAD
 # 진료 (diagnosis) 서비스를 잠시 내려놓음 (ctrl+c)
 
 # 예약 처리
@@ -349,7 +351,17 @@ mvn spring-boot:run
 http post localhost:8081/reservations reservatorName="Jackson" reservationDate="2020-04-30" phoneNumber="010-1234-5678" #Success
 ```
 
-- 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
+## 클러스터 적용 후 REST API 의 테스트
+
+http://52.231.118.148:8080/medicalRecords/     		//diagnosis 조회
+http://52.231.118.148:8080/reservations/       		//reservation 조회 
+http://52.231.118.148:8080/reservations reservatorName="pdc" reservationDate="202002" phoneNumber="0103701" //reservation 요청 
+Delete http://52.231.118.148:8080/reservations/1 	//reservation Cancel  Sample
+http://52.231.118.148:8080/reservationStats/   	  //lookup  조회
+http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
+
+
+- 또한 과도한 예약 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
 
 
 ## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
@@ -367,6 +379,7 @@ http post localhost:8081/reservations reservatorName="Jackson" reservationDate="
         Treated treated = new Treated();
         BeanUtils.copyProperties(this, treated);
         treated.publish();
+<<<<<<< HEAD
 
 
     }
@@ -376,9 +389,6 @@ http post localhost:8081/reservations reservatorName="Jackson" reservationDate="
 - 수납 서비스에서는 진료완료 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
 
 ```
-package fooddelivery;
-
-...
 
 @Service
 public class KafkaListener {
@@ -387,12 +397,13 @@ public class KafkaListener {
     FinancialManagementRepository financialManagementRepository;
 
     @StreamListener(Processor.INPUT)
-    public void TreatedEvent(@Payload Treated reservationReserved) {
-        if(reservationReserved.getEventType().equals("Treated")) {
+
+    public void TreatedEvent(@Payload Treated treated) {
+        if(treated.getEventType().equals("Treated")) {
             System.out.println("수납요청 되었습니다.");
 
             FinancialManagement financialManagement = new FinancialManagement();
-            financialManagement.setReservationId(reservationReserved.getReservationId());
+            financialManagement.setReservationId(treated.getReservationId());
             financialManagement.setFee(10000L);
             financialManagementRepository.save(financialManagement);
         }
@@ -448,6 +459,7 @@ mvn spring-boot:run
 
 #수납상태 확인
 http localhost:8085/financialManagements     # 모든 예약-진료에 대해서 요금이 청구되엇음을 확인.
+
 ```
 
 
@@ -455,8 +467,156 @@ http localhost:8085/financialManagements     # 모든 예약-진료에 대해서
 
 ## CI/CD 설정
 
+각 구현체들은 각자의 Git을 통해 빌드되며, Git Master에 트리거 되어 있다. pipeline build script 는 각 프로젝트 폴더 이하에 azure_pipeline.yml 에 포함되었다.
 
-각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD 플랫폼은 Azure pipeline 사용하였으며, pipeline build script 는 각 프로젝트 폴더 이하에 azure-pipeline.yml 에 포함되었다.
+azure_pipelist.yml 참고
+
+kubernetes Service
+``` yaml
+trigger:
+- master
+
+resources:
+- repo: self
+
+variables:
+- group: common-value
+  # containerRegistry: 'event.azurecr.io'
+  # containerRegistryDockerConnection: 'acr'
+  # environment: 'aks.default'
+- name: imageRepository
+  value: 'order'
+- name: dockerfilePath
+  value: '**/Dockerfile'
+- name: tag
+  value: '$(Build.BuildId)'
+  # Agent VM image name
+- name: vmImageName
+  value: 'ubuntu-latest'
+- name: MAVEN_CACHE_FOLDER
+  value: $(Pipeline.Workspace)/.m2/repository
+- name: MAVEN_OPTS
+  value: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+
+
+stages:
+- stage: Build
+  displayName: Build stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: CacheBeta@1
+      inputs:
+        key: 'maven | "$(Agent.OS)" | **/pom.xml'
+        restoreKeys: |
+           maven | "$(Agent.OS)"
+           maven
+        path: $(MAVEN_CACHE_FOLDER)
+      displayName: Cache Maven local repo
+    - task: Maven@3
+      inputs:
+        mavenPomFile: 'pom.xml'
+        options: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+        javaHomeOption: 'JDKVersion'
+        jdkVersionOption: '1.8'
+        jdkArchitectureOption: 'x64'
+        goals: 'package'
+    - task: Docker@2
+      inputs:
+        containerRegistry: $(containerRegistryDockerConnection)
+        repository: $(imageRepository)
+        command: 'buildAndPush'
+        Dockerfile: '**/Dockerfile'
+        tags: |
+          $(tag)
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy
+    pool:
+      vmImage: $(vmImageName)
+    environment: $(environment)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'default'
+              command: 'apply'
+              useConfigurationFile: true
+              configurationType: 'inline'
+              inline: |
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: $(imageRepository)
+                  labels:
+                    app: $(imageRepository)
+                spec:
+                  replicas: 1
+                  selector:
+                    matchLabels:
+                      app: $(imageRepository)
+                  template:
+                    metadata:
+                      labels:
+                        app: $(imageRepository)
+                    spec:
+                      containers:
+                        - name: $(imageRepository)
+                          image: $(containerRegistry)/$(imageRepository):$(tag)
+                          ports:
+                            - containerPort: 8080
+                          readinessProbe:
+                            httpGet:
+                              path: /actuator/health
+                              port: 8080
+                            initialDelaySeconds: 10
+                            timeoutSeconds: 2
+                            periodSeconds: 5
+                            failureThreshold: 10
+                          livenessProbe:
+                            httpGet:
+                              path: /actuator/health
+                              port: 8080
+                            initialDelaySeconds: 120
+                            timeoutSeconds: 2
+                            periodSeconds: 5
+                            failureThreshold: 5
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
+          - task: Kubernetes@1
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              namespace: 'default'
+              command: 'apply'
+              useConfigurationFile: true
+              configurationType: 'inline'
+              inline: |
+                apiVersion: v1
+                kind: Service
+                metadata:
+                  name: $(imageRepository)
+                  labels:
+                    app: $(imageRepository)
+                spec:
+                  ports:
+                    - port: 8080
+                      targetPort: 8080
+                  selector:
+                    app: $(imageRepository)
+              secretType: 'dockerRegistry'
+              containerRegistryType: 'Azure Container Registry'
+```
 
 
 ## 동기식 호출 / 서킷 브레이킹 / 장애격리
@@ -469,11 +629,24 @@ http localhost:8085/financialManagements     # 모든 예약-진료에 대해서
 ```
 # application.yml
 
-hystrix:
-  command:
-    # 전역설정
-    default:
-      execution.isolation.thread.timeoutInMilliseconds: 610
+server:
+  port: 8081
+spring:
+  profiles: default
+  cloud:
+    stream:
+      kafka:
+        binder:
+          brokers: localhost:9092
+      bindings:
+        output:
+          destination: animal
+          contentType: application/json
+feign:
+  hystrix:
+    enabled: true
+    
+    
 
 ```
 
