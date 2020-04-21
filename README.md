@@ -11,13 +11,12 @@
   - [분석/설계](#분석설계)
   - [구현:](#구현-)
     - [DDD 의 적용](#ddd-의-적용)
-    - [폴리글랏 퍼시스턴스](#폴리글랏-퍼시스턴스)
-    - [폴리글랏 프로그래밍](#폴리글랏-프로그래밍)
-    - [동기식 호출 과 Fallback 처리](#동기식-호출-과-Fallback-처리)
-    - [비동기식 호출 과 Eventual Consistency](#비동기식-호출-과-Eventual-Consistency)
+    - [동기식 호출과 Fallback 처리](#동기식-호출과-Fallback-처리)
+    - [비동기식 호출과 Eventual Consistency](#비동기식-호출과-Eventual-Consistency)
+    - [API 게이트웨이](#API-게이트웨이)
   - [운영](#운영)
-    - [CI/CD 설정](#cicd설정)
-    - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출-서킷-브레이킹-장애격리)
+    - [CI/CD 설정](#cicd-설정)
+    - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출--서킷-브레이킹--장애격리)
     - [오토스케일 아웃](#오토스케일-아웃)
     - [무정지 재배포](#무정지-재배포)
 
@@ -268,7 +267,7 @@ http localhost:8083/medicalRecords
 
 ```
 
-## 동기식 호출 과 Fallback 처리
+## 동기식 호출과 Fallback 처리
 
 분석단계에서의 조건 중 하나로 예약(reservation)->진료(diagnosis) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
 
@@ -293,8 +292,8 @@ import org.springframework.web.bind.annotation.RequestMethod;
 ```
 
 - 예약완료 직후(@PostPersist) 진단을 요청하도록 처리
-# Reservation.java (Entity)
 ```
+# Reservation.java (Entity)
     @PostPersist
        public void publishReservationReservedEvent() {
    
@@ -357,14 +356,14 @@ http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
 - 또한 과도한 예약 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
 
 
-## 비동기식 호출 / 시간적 디커플링 / 장애격리 / 최종 (Eventual) 일관성 테스트
+## 비동기식 호출과 Eventual Consistency
 
 
 진료가 이루어진 후에 수납시스템으로 이를 알려주는 행위는 동기식이 아니라 비 동기식으로 처리하여 수납 시스템의 처리를 위하여 예약/진료 시스템이 블로킹 되지 않아도록 처리한다.
  
 - 이를 위하여 진료이력을 남긴 후에 곧바로 진료가 이루어졌다는 이벤트를를 카프카로 송출한다(Publish)
  
-```java
+```
 // package Animal.Hospital.MedicalRecord;
 
     @PrePersist
@@ -378,7 +377,7 @@ http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
 
 - 수납 서비스에서는 진료완료 이벤트에 대해서 이를 수신하여 자신의 정책을 처리하도록 PolicyHandler 를 구현한다:
 
-```java
+``` java
 @Service
 public class KafkaListener {
 
@@ -402,7 +401,7 @@ public class KafkaListener {
 
 알림 시스템은 실제로 문자를 보낼 수는 없으므로, 예약/변경/취소 이벤트에 대해서 System.out.println 처리 하였다.
   
-```java
+``` java
 package com.example.notice;
 
 @Service
@@ -782,7 +781,7 @@ Shortest transaction:           0.02
 ```
 - 운영시스템은 죽지 않고 지속적으로 CB 에 의하여 적절히 회로가 열림과 닫힘이 벌어지면서 자원을 보호하고 있음을 보여줌. 78.92% 가 성공.
 
-### 오토스케일 아웃
+## 오토스케일 아웃
 앞서 CB 는 시스템을 안정되게 운영할 수 있게 해줬지만 사용자의 요청을 100% 받아들여주지 못했기 때문에 이에 대한 보완책으로 자동화된 확장 기능을 적용하고자 한다. 
 
 
