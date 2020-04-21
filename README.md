@@ -252,20 +252,17 @@ public interface 결제이력Service {
 
 
 ```
-# 결제 (pay) 서비스를 잠시 내려놓음 (ctrl+c)
 
-#주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Fail
-http localhost:8081/orders item=피자 storeId=2   #Fail
+## 클러스터 적용 후 REST API 의 테스트
 
-#결제서비스 재기동
-cd 결제
-mvn spring-boot:run
+http://52.231.118.148:8080/medicalRecords/     		//diagnosis 조회
+http://52.231.118.148:8080/reservations/       		//reservation 조회 
+http://52.231.118.148:8080/reservations reservatorName="pdc" reservationDate="202002" phoneNumber="0103701" //reservation 요청 
+Delete http://52.231.118.148:8080/reservations/1 	//reservation Cancel  Sample
+http://52.231.118.148:8080/reservationStats/   	  //lookup  조회
+http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
 
-#주문처리
-http localhost:8081/orders item=통닭 storeId=1   #Success
-http localhost:8081/orders item=피자 storeId=2   #Success
-```
+
 
 - 또한 과도한 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
 
