@@ -50,13 +50,6 @@
 
 * 이벤트스토밍 결과:  http://msaez.io/#/storming/0vtSW2vBLoZTFiAsgdwS6H7ODs33/every/2dac041f4e652d598a042694dfa26b20/-M5LTyP4cBS9IpsqYq0h
 
-- AS-IS 조직
-  ![image](https://user-images.githubusercontent.com/487999/79684144-2a893200-826a-11ea-9a01-79927d3a0107.png)
-
-- TO-BE 조직
-  ![image](https://user-images.githubusercontent.com/487999/79684159-3543c700-826a-11ea-8d5f-a3fc0c4cad87.png)
-
-
 ## 이벤트 도출
 ![image](https://user-images.githubusercontent.com/487999/79683604-47bc0180-8266-11ea-9212-7e88c9bf9911.png)
 
