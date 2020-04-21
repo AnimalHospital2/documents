@@ -9,11 +9,12 @@
 - [동물병원 진료시스템]
   - [서비스 시나리오](#서비스-시나리오)
   - [분석/설계](#분석설계)
-  - [구현:](#구현-)
+  - [구현](#구현)
     - [DDD 의 적용](#ddd-의-적용)
     - [동기식 호출과 Fallback 처리](#동기식-호출과-Fallback-처리)
     - [비동기식 호출과 Eventual Consistency](#비동기식-호출과-Eventual-Consistency)
     - [API 게이트웨이](#API-게이트웨이)
+    - [Oauth](#oauth)
   - [운영](#운영)
     - [CI/CD 설정](#cicd-설정)
     - [동기식 호출 / 서킷 브레이킹 / 장애격리](#동기식-호출--서킷-브레이킹--장애격리)
@@ -47,6 +48,10 @@
 
 * 이벤트스토밍 결과:  http://msaez.io/#/storming/0vtSW2vBLoZTFiAsgdwS6H7ODs33/every/2dac041f4e652d598a042694dfa26b20/-M5LTyP4cBS9IpsqYq0h
 
+- Core Domain : 예약 (Reservation) 및 진료 (Diagnosis) 도메인
+- Supporting Domain : Lookup(CQRS) 도메인
+- General Domain : 알림(notice) 시스템.
+
 ## 헥사고날 아키텍처 다이어그램 도출
     
 ![image](https://user-images.githubusercontent.com/38850007/79833622-aad4a200-83e6-11ea-80f1-6eb9a59503af.png)
@@ -64,9 +69,11 @@
 1. 수납 시스템: [https://github.com/AnimalHospital2/acceptance.git](https://github.com/AnimalHospital2/acceptance.git)
 1. 알림 시스템: [https://github.com/AnimalHospital2/notice.git](https://github.com/AnimalHospital2/notice.git)
 
-게이트웨이와 Oauth 시스템은 수업시간에 이용한 예제를 그대로 활용하였다.
+- 게이트웨이 시스템은 수업시간에 이용한 예제를 프로젝트에 맞게 설정을 변경하였다. 
+- Oauth 시스템은 수업시간에 이용한 예제를 그대로 활용하였다.
 
 모든 시스템은 Spring Boot로 구현하였고 `mvn spring-boot:run` 명령어로 실행할 수 있다.
+
 ## DDD 의 적용
 
 - 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (예시는 예약 시스템의 Reservation.class). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다.
@@ -344,13 +351,12 @@ http post localhost:8081/reservations reservatorName="Jackson" reservationDate="
 ```
 
 ## 클러스터 적용 후 REST API 의 테스트
-
-http://52.231.118.148:8080/medicalRecords/     		//diagnosis 조회
-http://52.231.118.148:8080/reservations/       		//reservation 조회 
-http://52.231.118.148:8080/reservations reservatorName="pdc" reservationDate="202002" phoneNumber="0103701" //reservation 요청 
-Delete http://52.231.118.148:8080/reservations/1 	//reservation Cancel  Sample
-http://52.231.118.148:8080/reservationStats/   	  //lookup  조회
-http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
+- http://52.231.118.148:8080/medicalRecords/     		//diagnosis 조회
+- http://52.231.118.148:8080/reservations/       		//reservation 조회 
+- http://52.231.118.148:8080/reservations reservatorName="pdc" reservationDate="202002" phoneNumber="0103701" //reservation 요청 
+- Delete http://52.231.118.148:8080/reservations/1 	//reservation Cancel  Sample
+- http://52.231.118.148:8080/reservationStats/   	  //lookup  조회
+- http://52.231.118.148:8080/financialManagements/ 	//acceptance 조회
 
 
 - 또한 과도한 예약 요청시에 서비스 장애가 도미노 처럼 벌어질 수 있다. (서킷브레이커, 폴백 처리는 운영단계에서 설명한다.)
