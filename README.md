@@ -37,8 +37,8 @@
 1. 트랜잭션
     1. 예약하지 않은 진료/처방은 성립되지 않아야 한다. Sync 호출
 1. 장애격리
-    1. 진료/처방 기능이 수행되지 않더라도 예약은 365일 24시간 받을 수 있어야 한다  Async (event-driven), Eventual Consistency
-    1. 예약시스템이 과중되면 사용자를 잠시동안 받지 않고 예약을 잠시후에 하도록 유도한다  Circuit breaker, fallback
+    1. 진료/처방 기능이 수행되지 않더라도 예약은 365일 24시간 받을 수 있어야 한다.  Async (event-driven), Eventual Consistency
+    1. 예약시스템이 과중되면 사용자를 잠시동안 받지 않고 예약을 잠시후에 하도록 유도한다.  Circuit breaker, fallback
 1. 성능
     1. 고객이 예약/진료/치료 결과를 시스템에서 확인할 수 있어야 한다.  CQRS
     1. 예약/진료/치료 상태가 바뀔때마다 카톡 등으로 알림을 줄 수 있어야 한다.  Event driven
